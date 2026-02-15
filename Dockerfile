@@ -56,6 +56,7 @@ RUN apt-get update \
     python3 \
     pkg-config \
     sudo \
+    jq \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Homebrew (must run as non-root user)
@@ -69,6 +70,10 @@ RUN NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.co
 USER root
 RUN chown -R root:root /home/linuxbrew/.linuxbrew
 ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
+
+# Symlink entire .config from /data (persistent volume) to root's home
+# This covers gog and any other tools that use ~/.config/
+RUN ln -sf /data/.config /root/.config
 
 WORKDIR /app
 
@@ -88,4 +93,7 @@ COPY src ./src
 
 ENV PORT=8080
 EXPOSE 8080
-CMD ["node", "src/server.js"]
+
+ENV SHELL=/bin/bash
+ENTRYPOINT []
+CMD ["/usr/local/bin/node", "src/server.js"]

@@ -188,11 +188,17 @@ async function startGateway() {
 
   console.log(`[gateway] ========== TOKEN SYNC COMPLETE ==========`);
 
+  // Derive bind mode from INTERNAL_GATEWAY_HOST:
+  // - 127.0.0.1 (default) → loopback (secure, internal only)
+  // - Anything else (e.g., 0.0.0.0) → lan (external access, e.g., for node pairing)
+  const gatewayBind = INTERNAL_GATEWAY_HOST === "127.0.0.1" ? "loopback" : "lan";
+  console.log(`[gateway] Using bind mode: ${gatewayBind} (INTERNAL_GATEWAY_HOST=${INTERNAL_GATEWAY_HOST})`);
+
   const args = [
     "gateway",
     "run",
     "--bind",
-    "loopback",
+    gatewayBind,
     "--port",
     String(INTERNAL_GATEWAY_PORT),
     "--auth",
@@ -630,9 +636,11 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
 
       console.log(`[onboard] ========== TOKEN DIAGNOSTIC END ==========`);
 
+      // Use same bind logic as startGateway()
+      const onboardBind = INTERNAL_GATEWAY_HOST === "127.0.0.1" ? "loopback" : "lan";
       await runCmd(
         OPENCLAW_NODE,
-        clawArgs(["config", "set", "gateway.bind", "loopback"]),
+        clawArgs(["config", "set", "gateway.bind", onboardBind]),
       );
       await runCmd(
         OPENCLAW_NODE,

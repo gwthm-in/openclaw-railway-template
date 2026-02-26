@@ -224,6 +224,30 @@ async function startGateway() {
     throw err; // Don't start gateway with mismatched token
   }
 
+  // Set allowedOrigins for Control UI so WebSocket connections from the public
+  // domain are accepted. Newer Openclaw versions reject origins that don't match.
+  const publicDomain =
+    process.env.OPENCLAW_PUBLIC_ORIGIN?.trim() ||
+    (process.env.RAILWAY_PUBLIC_DOMAIN
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : null);
+
+  if (publicDomain) {
+    const origins = JSON.stringify([publicDomain]);
+    console.log(`[gateway] Setting controlUi.allowedOrigins: ${origins}`);
+    await runCmd(
+      OPENCLAW_NODE,
+      clawArgs(["config", "set", "--json", "gateway.controlUi.allowedOrigins", origins]),
+    );
+  } else {
+    // Fallback: allow Host-header origin when we can't determine the public domain.
+    console.log(`[gateway] No public domain detected, enabling Host-header origin fallback`);
+    await runCmd(
+      OPENCLAW_NODE,
+      clawArgs(["config", "set", "gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback", "true"]),
+    );
+  }
+
   console.log(`[gateway] ========== TOKEN SYNC COMPLETE ==========`);
 
   // Derive bind mode from INTERNAL_GATEWAY_HOST:
@@ -694,6 +718,23 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
         OPENCLAW_NODE,
         clawArgs(["config", "set", "gateway.controlUi.allowInsecureAuth", "true"]),
       );
+      // Set allowedOrigins so the Control UI accepts WebSocket connections from the public domain
+      const onboardPublicDomain =
+        process.env.OPENCLAW_PUBLIC_ORIGIN?.trim() ||
+        (process.env.RAILWAY_PUBLIC_DOMAIN
+          ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+          : null);
+      if (onboardPublicDomain) {
+        await runCmd(
+          OPENCLAW_NODE,
+          clawArgs(["config", "set", "--json", "gateway.controlUi.allowedOrigins", JSON.stringify([onboardPublicDomain])]),
+        );
+      } else {
+        await runCmd(
+          OPENCLAW_NODE,
+          clawArgs(["config", "set", "gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback", "true"]),
+        );
+      }
 
       const channelsHelp = await runCmd(
         OPENCLAW_NODE,

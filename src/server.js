@@ -121,6 +121,24 @@ function humanSize(bytes) {
   return val.toFixed(i === 0 ? 0 : 1) + " " + units[i];
 }
 
+function dirSizeBytes(dirPath) {
+  let total = 0;
+  try {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const e of entries) {
+      const full = path.join(dirPath, e.name);
+      try {
+        if (e.isDirectory()) {
+          total += dirSizeBytes(full);
+        } else {
+          total += fs.statSync(full).size;
+        }
+      } catch { /* broken symlink / permission */ }
+    }
+  } catch { /* unreadable dir */ }
+  return total;
+}
+
 // Paths relative to /data that must not be deleted (critical for system operation).
 const PROTECTED_PATHS = new Set([
   ".openclaw",
@@ -858,17 +876,10 @@ app.post("/setup/api/reset", requireSetupAuth, async (_req, res) => {
 app.get("/setup/api/disk/usage", requireSetupAuth, async (_req, res) => {
   try {
     const dataRoot = "/data";
-    const dfResult = await runCmd("df", ["-B1", dataRoot]);
-    let volumeTotal = 0, volumeUsed = 0, volumeAvailable = 0;
-    const dfLines = dfResult.output.split("\n");
-    if (dfLines.length >= 2) {
-      const parts = dfLines[1].split(/\s+/);
-      if (parts.length >= 4) {
-        volumeTotal = parseInt(parts[1], 10) || 0;
-        volumeUsed = parseInt(parts[2], 10) || 0;
-        volumeAvailable = parseInt(parts[3], 10) || 0;
-      }
-    }
+    const stat = fs.statfsSync(dataRoot);
+    const volumeTotal = stat.bsize * stat.blocks;
+    const volumeAvailable = stat.bsize * stat.bavail;
+    const volumeUsed = volumeTotal - stat.bsize * stat.bfree;
     res.json({
       volume: {
         total: volumeTotal,
@@ -911,9 +922,7 @@ app.get("/setup/api/disk/browse", requireSetupAuth, async (req, res) => {
 
       try {
         if (d.isDirectory()) {
-          const duResult = await runCmd("du", ["-sb", fullPath]);
-          const m = duResult.output.match(/^(\d+)/);
-          sizeBytes = m ? parseInt(m[1], 10) : 0;
+          sizeBytes = dirSizeBytes(fullPath);
         } else {
           sizeBytes = fs.statSync(fullPath).size;
         }
@@ -970,9 +979,8 @@ app.post("/setup/api/disk/delete", requireSetupAuth, async (req, res) => {
 
     let freedBytes = 0;
     try {
-      const duResult = await runCmd("du", ["-sb", absPath]);
-      const m = duResult.output.match(/^(\d+)/);
-      freedBytes = m ? parseInt(m[1], 10) : 0;
+      const st = fs.statSync(absPath);
+      freedBytes = st.isDirectory() ? dirSizeBytes(absPath) : st.size;
     } catch { /* ignore */ }
 
     fs.rmSync(absPath, { recursive: true, force: true });

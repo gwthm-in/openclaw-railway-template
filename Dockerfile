@@ -20,9 +20,25 @@ RUN corepack enable
 
 WORKDIR /openclaw
 
-# Pin to a known ref (tag/branch). If it doesn't exist, fall back to main.
-ARG OPENCLAW_GIT_REF=main
-RUN git clone --depth 1 --branch "${OPENCLAW_GIT_REF}" https://github.com/openclaw/openclaw.git .
+# Pin to a known ref (tag/branch/latest).
+# Set to "latest" to auto-resolve the newest semver git tag at build time.
+ARG OPENCLAW_GIT_REF=latest
+RUN set -eux; \
+  REPO_URL="https://github.com/openclaw/openclaw.git"; \
+  REF="${OPENCLAW_GIT_REF}"; \
+  if [ "$REF" = "latest" ]; then \
+    REF=$(git ls-remote --tags --sort=-v:refname "$REPO_URL" \
+      | awk '{print $2}' \
+      | sed 's|^refs/tags/||; /\^{}$/d' \
+      | head -n1); \
+    if [ -z "$REF" ]; then \
+      echo "WARNING: no tags found, falling back to main"; \
+      REF="main"; \
+    else \
+      echo "Resolved latest tag: $REF"; \
+    fi; \
+  fi; \
+  git clone --depth 1 --branch "$REF" "$REPO_URL" .
 
 # Patch: relax version requirements for packages that may reference unpublished versions.
 # Apply to all extension package.json files to handle workspace protocol (workspace:*).

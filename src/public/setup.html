@@ -21,6 +21,38 @@
   </div>
 
   <div class="card">
+    <h2>Disk Management</h2>
+    <p class="muted">Manage disk space on the /data volume. Protected system files cannot be deleted.</p>
+
+    <div id="diskOverview">
+      <button id="diskRefresh" class="secondary-button" style="margin-left:0">Check disk usage</button>
+    </div>
+
+    <div id="diskBar" style="display:none; margin-top: 0.75rem;">
+      <div class="disk-bar-container">
+        <div class="disk-bar-fill" id="diskBarFill"></div>
+      </div>
+      <div class="disk-bar-label" id="diskBarLabel"></div>
+    </div>
+
+    <div id="diskBrowser" style="display:none; margin-top: 1rem;">
+      <div id="diskBreadcrumb" class="muted" style="margin-bottom: 0.5rem;"></div>
+      <table class="disk-table" id="diskTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th style="text-align:right">Size</th>
+            <th style="text-align:right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="diskTableBody"></tbody>
+      </table>
+    </div>
+
+    <pre id="diskLog" style="display:none;"></pre>
+  </div>
+
+  <div class="card">
     <h2>1) Model/auth provider</h2>
     <p class="muted">Matches the groups shown in the terminal onboarding.</p>
     <label>Provider group</label>

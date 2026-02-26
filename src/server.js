@@ -113,6 +113,26 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function humanSize(bytes) {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const val = bytes / Math.pow(1024, i);
+  return val.toFixed(i === 0 ? 0 : 1) + " " + units[i];
+}
+
+// Paths relative to /data that must not be deleted (critical for system operation).
+const PROTECTED_PATHS = new Set([
+  ".openclaw",
+  ".openclaw/openclaw.json",
+  ".openclaw/gateway.token",
+]);
+
+function isProtectedPath(relPath) {
+  const normalized = relPath.replace(/\\/g, "/").replace(/\/+$/, "");
+  return PROTECTED_PATHS.has(normalized);
+}
+
 async function waitForGatewayReady(opts = {}) {
   const timeoutMs = opts.timeoutMs ?? 20_000;
   const start = Date.now();
@@ -830,6 +850,143 @@ app.post("/setup/api/reset", requireSetupAuth, async (_req, res) => {
       .send("OK - deleted config file. You can rerun setup now.");
   } catch (err) {
     res.status(500).type("text/plain").send(String(err));
+  }
+});
+
+// ── Disk management endpoints ──────────────────────────────────────────────
+
+app.get("/setup/api/disk/usage", requireSetupAuth, async (_req, res) => {
+  try {
+    const dataRoot = "/data";
+    const dfResult = await runCmd("df", ["-B1", dataRoot]);
+    let volumeTotal = 0, volumeUsed = 0, volumeAvailable = 0;
+    const dfLines = dfResult.output.split("\n");
+    if (dfLines.length >= 2) {
+      const parts = dfLines[1].split(/\s+/);
+      if (parts.length >= 4) {
+        volumeTotal = parseInt(parts[1], 10) || 0;
+        volumeUsed = parseInt(parts[2], 10) || 0;
+        volumeAvailable = parseInt(parts[3], 10) || 0;
+      }
+    }
+    res.json({
+      volume: {
+        total: volumeTotal,
+        used: volumeUsed,
+        available: volumeAvailable,
+        totalHuman: humanSize(volumeTotal),
+        usedHuman: humanSize(volumeUsed),
+        availableHuman: humanSize(volumeAvailable),
+        usedPercent: volumeTotal > 0
+          ? Math.round((volumeUsed / volumeTotal) * 100)
+          : 0,
+      },
+    });
+  } catch (err) {
+    console.error("[disk/usage] error:", err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+app.get("/setup/api/disk/browse", requireSetupAuth, async (req, res) => {
+  try {
+    const dataRoot = "/data";
+    const relDir = (req.query.dir || "").replace(/\.\./g, "");
+    const absDir = path.resolve(dataRoot, relDir);
+
+    if (!absDir.startsWith(dataRoot)) {
+      return res.status(400).json({ error: "Path must be within /data" });
+    }
+    if (!fs.existsSync(absDir) || !fs.statSync(absDir).isDirectory()) {
+      return res.status(404).json({ error: "Directory not found" });
+    }
+
+    const dirents = fs.readdirSync(absDir, { withFileTypes: true });
+    const items = [];
+
+    for (const d of dirents) {
+      const fullPath = path.join(absDir, d.name);
+      const relPath = path.relative(dataRoot, fullPath);
+      let sizeBytes = 0;
+
+      try {
+        if (d.isDirectory()) {
+          const duResult = await runCmd("du", ["-sb", fullPath]);
+          const m = duResult.output.match(/^(\d+)/);
+          sizeBytes = m ? parseInt(m[1], 10) : 0;
+        } else {
+          sizeBytes = fs.statSync(fullPath).size;
+        }
+      } catch { /* broken symlink / permission issue */ }
+
+      items.push({
+        name: d.name,
+        path: relPath,
+        isDirectory: d.isDirectory(),
+        isSymlink: d.isSymbolicLink(),
+        sizeBytes,
+        sizeHuman: humanSize(sizeBytes),
+        protected: isProtectedPath(relPath),
+      });
+    }
+
+    items.sort((a, b) => b.sizeBytes - a.sizeBytes);
+
+    res.json({
+      currentDir: relDir || ".",
+      parentDir: relDir ? path.dirname(relDir) : null,
+      items,
+    });
+  } catch (err) {
+    console.error("[disk/browse] error:", err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+app.post("/setup/api/disk/delete", requireSetupAuth, async (req, res) => {
+  try {
+    const dataRoot = "/data";
+    const targetPath = (req.body.path || "").replace(/\.\./g, "");
+    const absPath = path.resolve(dataRoot, targetPath);
+
+    if (!absPath.startsWith(dataRoot) || absPath === dataRoot) {
+      return res.status(400).json({
+        ok: false,
+        error: "Cannot delete: path must be within /data and cannot be /data itself",
+      });
+    }
+
+    const relPath = path.relative(dataRoot, absPath);
+    if (isProtectedPath(relPath)) {
+      return res.status(403).json({
+        ok: false,
+        error: `Cannot delete protected path: ${relPath}. This file is critical for system operation.`,
+      });
+    }
+
+    if (!fs.existsSync(absPath)) {
+      return res.status(404).json({ ok: false, error: "Path not found" });
+    }
+
+    let freedBytes = 0;
+    try {
+      const duResult = await runCmd("du", ["-sb", absPath]);
+      const m = duResult.output.match(/^(\d+)/);
+      freedBytes = m ? parseInt(m[1], 10) : 0;
+    } catch { /* ignore */ }
+
+    fs.rmSync(absPath, { recursive: true, force: true });
+    console.log(`[disk/delete] Deleted: ${absPath} (freed ~${humanSize(freedBytes)})`);
+
+    res.json({
+      ok: true,
+      deleted: relPath,
+      freedBytes,
+      freedHuman: humanSize(freedBytes),
+    });
+  } catch (err) {
+    console.error("[disk/delete] error:", err);
+    res.status(500).json({ ok: false, error: String(err) });
   }
 });
 

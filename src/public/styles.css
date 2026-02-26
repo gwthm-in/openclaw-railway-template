@@ -109,3 +109,80 @@ a:hover {
 h1, h2, h3 {
   color: #f0f4ff;
 }
+
+/* Disk management */
+.disk-bar-container {
+  width: 100%;
+  height: 20px;
+  background: #1f2937;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #374151;
+}
+
+.disk-bar-fill {
+  height: 100%;
+  background: #00e5cc;
+  border-radius: 10px 0 0 10px;
+  transition: width 0.3s, background 0.3s;
+}
+
+.disk-bar-fill.warning { background: #f59e0b; }
+.disk-bar-fill.critical { background: #ff4d4d; }
+
+.disk-bar-label {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: #8892b0;
+}
+
+.disk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.disk-table th {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid #374151;
+  color: #8892b0;
+  font-weight: 600;
+}
+
+.disk-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid #1f2937;
+}
+
+.disk-table tr:hover { background: #1a2332; }
+
+.disk-table .dir-link {
+  cursor: pointer;
+  color: #00e5cc;
+}
+
+.disk-table .dir-link:hover { color: #ff4d4d; }
+
+.disk-table .protected-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: #374151;
+  color: #8892b0;
+  margin-left: 0.3rem;
+}
+
+.delete-btn {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  background: #7f1d1d;
+  border: 1px solid #991b1b;
+  border-radius: 6px;
+  color: #fca5a5;
+  cursor: pointer;
+}
+
+.delete-btn:hover { background: #991b1b; }
+.delete-btn:disabled { opacity: 0.3; cursor: not-allowed; }

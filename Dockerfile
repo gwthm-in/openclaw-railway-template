@@ -87,6 +87,16 @@ USER root
 RUN chown -R root:root /home/linuxbrew/.linuxbrew
 ENV PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}"
 
+# Install gogcli (Google Suite CLI: Gmail, GCal, GDrive, etc.)
+RUN set -eux; \
+  GOGCLI_URL=$(curl -sL https://api.github.com/repos/steipete/gogcli/releases/latest \
+    | jq -r '.assets[] | select(.name | test("linux.*amd64")) | .browser_download_url'); \
+  curl -sL "$GOGCLI_URL" -o /tmp/gogcli.tar.gz; \
+  tar -xzf /tmp/gogcli.tar.gz -C /tmp; \
+  mv /tmp/gog /usr/local/bin/gog; \
+  chmod +x /usr/local/bin/gog; \
+  rm /tmp/gogcli.tar.gz
+
 # Symlink entire .config from /data (persistent volume) to root's home
 # This covers gog and any other tools that use ~/.config/
 RUN ln -sf /data/.config /root/.config

@@ -121,5 +121,12 @@ ENV PORT=8080
 EXPOSE 8080
 
 ENV SHELL=/bin/bash
+
+# Ensure sh/bash are findable in /usr/local/bin for Railway SSH exec
+# On Debian bookworm /bin is a symlink to /usr/bin, which can confuse
+# crun's PATH resolution during container exec operations
+RUN ln -sf /usr/bin/bash /usr/local/bin/sh && \
+    ln -sf /usr/bin/bash /usr/local/bin/bash
+
 ENTRYPOINT []
-CMD ["bin/sh", "-c", "/usr/local/bin/node", "src/server.js"]
+CMD ["/usr/local/bin/node", "src/server.js"]

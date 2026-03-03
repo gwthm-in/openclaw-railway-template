@@ -122,5 +122,5 @@ EXPOSE 8080
 
 ENV SHELL=/bin/bash
 ENTRYPOINT []
-# Use shell form to keep bash as parent process, allowing SSH access
-CMD /usr/local/bin/node src/server.js
+# Keep bash as parent process to allow Railway SSH access
+CMD ["/bin/bash", "-c", "/usr/local/bin/node src/server.js"]

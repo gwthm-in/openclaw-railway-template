@@ -121,4 +121,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 ENTRYPOINT []
-CMD ["node", "src/server.js"]
+CMD ["/usr/local/bin/node", "src/server.js"]

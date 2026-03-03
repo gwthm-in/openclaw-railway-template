@@ -120,20 +120,6 @@ COPY src ./src
 ENV PORT=8080
 EXPOSE 8080
 
-# Create entrypoint wrapper - start node and keep container alive for SSH
-RUN printf '%s\n' \
-  '#!/bin/bash' \
-  '' \
-  '# Start node server in background' \
-  '/usr/local/bin/node src/server.js &' \
-  'NODE_PID=$!' \
-  '' \
-  '# Handle signals and forward to node' \
-  'trap "kill -TERM $NODE_PID 2>/dev/null; exit" SIGTERM SIGINT' \
-  '' \
-  '# Wait for node process (bash builtin, no external commands needed)' \
-  'wait $NODE_PID' \
-  > /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
-
-ENTRYPOINT ["/bin/bash", "/docker-entrypoint.sh"]
-CMD []
+ENV SHELL=/bin/bash
+ENTRYPOINT []
+CMD ["/usr/local/bin/node", "src/server.js"]

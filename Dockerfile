@@ -122,4 +122,5 @@ EXPOSE 8080
 
 ENV SHELL=/bin/bash
 ENTRYPOINT []
-CMD ["/usr/local/bin/node", "src/server.js"]
+# Use shell form to keep bash as parent process, allowing SSH access
+CMD /usr/local/bin/node src/server.js

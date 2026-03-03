@@ -119,8 +119,4 @@ COPY src ./src
 
 ENV PORT=8080
 EXPOSE 8080
-
-ENV SHELL=/bin/bash
-ENTRYPOINT []
-# Keep bash as parent process to allow Railway SSH access
-CMD ["/bin/bash", "-c", "/usr/local/bin/node src/server.js"]
+CMD ["node", "src/server.js"]

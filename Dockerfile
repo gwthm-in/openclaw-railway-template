@@ -123,7 +123,6 @@ EXPOSE 8080
 # Create entrypoint wrapper - start node and keep container alive for SSH
 RUN printf '%s\n' \
   '#!/bin/bash' \
-  'set -e' \
   '' \
   '# Start node server in background' \
   '/usr/local/bin/node src/server.js &' \
@@ -132,8 +131,8 @@ RUN printf '%s\n' \
   '# Handle signals and forward to node' \
   'trap "kill -TERM $NODE_PID 2>/dev/null; exit" SIGTERM SIGINT' \
   '' \
-  '# Keep container alive - wait for node but also respond to Railway SSH' \
-  'while kill -0 $NODE_PID 2>/dev/null; do sleep 1; done' \
+  '# Wait for node process (bash builtin, no external commands needed)' \
+  'wait $NODE_PID' \
   > /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 ENTRYPOINT ["/bin/bash", "/docker-entrypoint.sh"]

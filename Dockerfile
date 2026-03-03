@@ -119,4 +119,6 @@ COPY src ./src
 
 ENV PORT=8080
 EXPOSE 8080
+
+ENTRYPOINT []
 CMD ["node", "src/server.js"]

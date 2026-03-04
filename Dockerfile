@@ -121,4 +121,5 @@ ENV PORT=8080
 EXPOSE 8080
 
 ENV SHELL=/bin/sh
+ENTRYPOINT []
 CMD ["sh", "-c", "/usr/local/bin/node src/server.js"]

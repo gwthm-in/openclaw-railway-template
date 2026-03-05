@@ -1,5 +1,5 @@
 # Build openclaw from source to avoid npm packaging gaps (some dist files are not shipped).
-FROM node:22-bookworm AS openclaw-build
+FROM node:22-bullseye AS openclaw-build
 
 # Dependencies needed for openclaw build
 RUN apt-get update \
@@ -55,7 +55,7 @@ RUN pnpm ui:install && pnpm ui:build
 
 
 # Runtime image
-FROM node:22-bookworm
+FROM node:22-bullseye
 ENV NODE_ENV=production
 
 RUN apt-get update \
@@ -120,6 +120,4 @@ COPY src ./src
 ENV PORT=8080
 EXPOSE 8080
 
-ENV SHELL=/bin/sh
-ENTRYPOINT []
-CMD ["/bin/sh", "-c", "/usr/local/bin/node src/server.js"]
+CMD ["node", "src/server.js"]

@@ -549,10 +549,10 @@
       return;
     }
 
-    // Validate file size (250MB max)
-    var maxSize = 250 * 1024 * 1024;
+    // Validate file size (1GB max)
+    var maxSize = 1024 * 1024 * 1024;
     if (file.size > maxSize) {
-      importOutputEl.textContent = 'Error: File size exceeds 250MB limit (got ' + Math.round(file.size / 1024 / 1024) + 'MB)';
+      importOutputEl.textContent = 'Error: File size exceeds 1GB limit (got ' + Math.round(file.size / 1024 / 1024) + 'MB)';
       return;
     }
 

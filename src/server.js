@@ -1877,7 +1877,7 @@ function readBodyBuffer(req, maxBytes) {
  * Security: 250MB max, path traversal prevention, /data-only extraction
  */
 app.post("/setup/import", requireSetupAuth, async (req, res) => {
-  const MAX_UPLOAD_SIZE = 250 * 1024 * 1024; // 250MB
+  const MAX_UPLOAD_SIZE = 1024 * 1024 * 1024; // 1GB
   
   try {
     console.log("[import] Starting backup import...");

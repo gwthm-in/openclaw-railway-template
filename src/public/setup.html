@@ -13,11 +13,91 @@
   <div class="card">
     <h2>Status</h2>
     <div id="status">Loading...</div>
+    <div id="statusDetails" style="margin-top: 0.75rem; padding: 0.75rem; background: #f5f5f5; border-radius: 4px;"></div>
     <div style="margin-top: 0.75rem">
       <a href="/openclaw" target="_blank">Open Openclaw UI</a>
       &nbsp;|&nbsp;
       <a href="/setup/export" target="_blank">Download backup (.tar.gz)</a>
+      &nbsp;|&nbsp;
+      <a href="/healthz" target="_blank">Health Check</a>
     </div>
+    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #ddd;">
+      <p class="muted" style="margin: 0;">
+        Want to contribute? Check out the <a href="https://github.com/moltinginstar/moltbot/blob/main/CONTRIBUTING.md" target="_blank">Contributing Guide</a>
+      </p>
+    </div>
+    
+    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #ddd;">
+      <h3 style="margin-top: 0; font-size: 1rem;">Import Backup</h3>
+      <p class="muted">Restore config and workspace from a previous backup. This will overwrite existing data.</p>
+      
+      <label>Backup file (.tar.gz)</label>
+      <input id="importFile" type="file" accept=".tar.gz,.tgz,application/gzip,application/x-gzip" />
+      
+      <button id="importButton">Import backup</button>
+      <pre id="importOutput" style="margin-top: 1rem; max-height: 200px; overflow-y: auto; background: #f5f5f5; padding: 0.75rem; border-radius: 4px;"></pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Debug Console</h2>
+    <p class="muted">Run OpenClaw commands without SSH access. All commands are allowlisted for security.</p>
+    
+    <label>Command</label>
+    <select id="consoleCommand">
+      <option value="">-- Select command --</option>
+      <optgroup label="Gateway Lifecycle">
+        <option value="gateway.restart">gateway.restart - Restart gateway process</option>
+        <option value="gateway.stop">gateway.stop - Stop gateway process</option>
+        <option value="gateway.start">gateway.start - Start gateway process</option>
+      </optgroup>
+      <optgroup label="OpenClaw Status">
+        <option value="openclaw.version">openclaw.version - Show OpenClaw version</option>
+        <option value="openclaw.status">openclaw.status - Show gateway status</option>
+        <option value="openclaw.health">openclaw.health - Run health check</option>
+        <option value="openclaw.doctor">openclaw.doctor - Run diagnostics</option>
+      </optgroup>
+      <optgroup label="Logs & Config">
+        <option value="openclaw.logs.tail">openclaw.logs.tail - Show recent logs (arg: count)</option>
+        <option value="openclaw.config.get">openclaw.config.get - Get config value (arg: path)</option>
+      </optgroup>
+      <optgroup label="Devices">
+        <option value="openclaw.devices.list">openclaw.devices.list - List devices</option>
+        <option value="openclaw.devices.approve">openclaw.devices.approve - Approve device (arg: requestId)</option>
+      </optgroup>
+      <optgroup label="Plugins">
+        <option value="openclaw.plugins.list">openclaw.plugins.list - List plugins</option>
+        <option value="openclaw.plugins.enable">openclaw.plugins.enable - Enable plugin (arg: name)</option>
+      </optgroup>
+    </select>
+    
+    <label>Argument (if required)</label>
+    <input id="consoleArg" type="text" placeholder="e.g., 50 for logs tail, gateway.port for config get, requestId for device approve" />
+    <div class="muted" style="margin-top: 0.25rem">
+      Some commands require arguments: logs tail (count), config get (path), devices approve (requestId), plugins enable (name).
+    </div>
+    
+    <button id="consoleRun">Run Command</button>
+    <pre id="consoleOutput" style="margin-top: 1rem; max-height: 400px; overflow-y: auto; background: #f5f5f5; padding: 0.75rem; border-radius: 4px;"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Config Editor</h2>
+    <p class="muted">Edit openclaw.json directly. Automatic backups are created before saving. Gateway restarts automatically after save.</p>
+    
+    <div class="muted" style="margin-bottom: 0.5rem">
+      Config file: <code id="configPath">Loading...</code>
+    </div>
+    
+    <label>JSON Configuration</label>
+    <textarea id="configContent" style="font-family: 'Monaco', 'Menlo', 'Consolas', monospace; font-size: 12px; height: 260px; resize: vertical;"></textarea>
+    
+    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+      <button id="configReload">Reload from disk</button>
+      <button id="configSave">Save & restart gateway</button>
+    </div>
+    
+    <pre id="configOutput" style="margin-top: 1rem; max-height: 200px; overflow-y: auto; background: #f5f5f5; padding: 0.75rem; border-radius: 4px;"></pre>
   </div>
 
   <div class="card">
@@ -56,10 +136,14 @@
     <h2>1) Model/auth provider</h2>
     <p class="muted">Matches the groups shown in the terminal onboarding.</p>
     <label>Provider group</label>
-    <select id="authGroup"></select>
+    <select id="authGroup">
+      <option value="">Select provider group...</option>
+    </select>
 
     <label>Auth method</label>
-    <select id="authChoice"></select>
+    <select id="authChoice">
+      <option value="">Select auth method...</option>
+    </select>
 
     <label>Key / Token (if required)</label>
     <input id="authSecret" type="password" placeholder="Paste API key / token if applicable" />
@@ -97,13 +181,79 @@
   </div>
 
   <div class="card">
+    <h2>2b) Advanced: Custom OpenAI-compatible provider (optional)</h2>
+    <p class="muted">Add a custom provider that uses OpenAI-compatible API (e.g., local LLM, proxy service). This provider will be merged with built-in providers.</p>
+
+    <label>Provider ID</label>
+    <input id="customProviderId" type="text" placeholder="my-custom-provider" />
+    <div class="muted" style="margin-top: 0.25rem">
+      Alphanumeric, underscores, and dashes only (e.g., "ollama", "local-llm", "my_proxy").
+    </div>
+
+    <label>Base URL</label>
+    <input id="customProviderBaseUrl" type="text" placeholder="https://api.example.com/v1" />
+    <div class="muted" style="margin-top: 0.25rem">
+      Must include <code>/v1</code> suffix for OpenAI compatibility (e.g., "http://localhost:11434/v1").
+    </div>
+
+    <label>API Type</label>
+    <select id="customProviderApi">
+      <option value="">-- Select API type --</option>
+      <option value="openai-completions">openai-completions</option>
+      <option value="openai-responses">openai-responses</option>
+    </select>
+
+    <label>API Key Environment Variable (optional)</label>
+    <input id="customProviderApiKeyEnv" type="text" placeholder="MY_PROVIDER_API_KEY" />
+    <div class="muted" style="margin-top: 0.25rem">
+      Environment variable name containing the API key (e.g., "OLLAMA_API_KEY"). Must be uppercase with underscores. Leave empty for unauthenticated providers.
+    </div>
+
+    <label>Model ID (optional)</label>
+    <input id="customProviderModelId" type="text" placeholder="llama3.2" />
+    <div class="muted" style="margin-top: 0.25rem">
+      Default model to use with this provider (e.g., "llama3.2", "gpt-4"). Can be overridden later.
+    </div>
+  </div>
+
+  <div class="card">
     <h2>3) Run onboarding</h2>
     <button id="run">Run setup</button>
     <button id="pairingApprove" class="secondary-button">Approve pairing</button>
     <button id="reset" class="tertiary-button">Reset setup</button>
     <pre id="log"></pre>
     <p class="muted">Reset deletes the Openclaw config file so you can rerun onboarding. Pairing approval lets you grant DM access when dmPolicy=pairing.</p>
+    
+    <details style="margin-top: 1rem;">
+      <summary style="cursor: pointer; font-weight: bold;">Device Pairing Helper</summary>
+      <div style="margin-top: 0.75rem;">
+        <p class="muted">Approve pending device connection requests when using device pairing authentication.</p>
+        <button id="devicesRefresh">Refresh pending devices</button>
+        <div id="devicesList" style="margin-top: 0.75rem;"></div>
+      </div>
+    </details>
   </div>
+
+  <footer style="margin-top: 3rem; padding: 2rem 1rem 1rem; border-top: 2px solid #ddd; text-align: center;">
+    <div style="max-width: 600px; margin: 0 auto;">
+      <h3 style="margin-top: 0; font-size: 1.1rem;">Need Help?</h3>
+      <p class="muted" style="margin-bottom: 1rem;">Get support from the community and contributors</p>
+      <div style="display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap;">
+        <a href="https://github.com/codetitlan/moltbot-railway-template/issues/new" target="_blank" style="text-decoration: none;">
+          📝 Report an Issue
+        </a>
+        <a href="https://discord.gg/openclaw" target="_blank" style="text-decoration: none;">
+          💬 Discord Community
+        </a>
+        <a href="https://github.com/codetitlan/moltbot-railway-template#readme" target="_blank" style="text-decoration: none;">
+          📚 Documentation
+        </a>
+      </div>
+      <p class="muted" style="margin-top: 1.5rem; font-size: 0.85em;">
+        moltbot-railway-template | Powered by <a href="https://github.com/moltinginstar/openclaw" target="_blank">OpenClaw</a>
+      </p>
+    </div>
+  </footer>
 
   <script src="/setup/app.js"></script>
 </body>

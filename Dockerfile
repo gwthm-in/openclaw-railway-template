@@ -20,25 +20,20 @@ RUN corepack enable
 
 WORKDIR /openclaw
 
-# Pin to a known ref (tag/branch/latest).
-# Set to "latest" to auto-resolve the newest semver git tag at build time.
-ARG OPENCLAW_GIT_REF=latest
-RUN set -eux; \
-  REPO_URL="https://github.com/openclaw/openclaw.git"; \
-  REF="${OPENCLAW_GIT_REF}"; \
-  if [ "$REF" = "latest" ]; then \
-    REF=$(git ls-remote --tags --sort=-v:refname "$REPO_URL" \
-      | awk '{print $2}' \
-      | sed 's|^refs/tags/||; /\^{}$/d' \
-      | head -n1); \
-    if [ -z "$REF" ]; then \
-      echo "WARNING: no tags found, falling back to main"; \
-      REF="main"; \
-    else \
-      echo "Resolved latest tag: $REF"; \
-    fi; \
+# OpenClaw version control:
+# - Set OPENCLAW_VERSION Railway variable to use a specific tag (e.g., v2026.2.15)
+# - If not set, defaults to main branch (original behavior)
+# - Can also override locally with --build-arg OPENCLAW_VERSION=<tag>
+ARG OPENCLAW_VERSION
+RUN set -eu; \
+  if [ -n "${OPENCLAW_VERSION:-}" ]; then \
+    REF="${OPENCLAW_VERSION}"; \
+    echo "✓ Using OpenClaw ${REF}"; \
+  else \
+    REF="main"; \
+    echo "⚠ OPENCLAW_VERSION not set, using main branch (may be unstable)"; \
   fi; \
-  git clone --depth 1 --branch "$REF" "$REPO_URL" .
+  git clone --depth 1 --branch "${REF}" https://github.com/openclaw/openclaw.git .
 
 # Patch: relax version requirements for packages that may reference unpublished versions.
 # Apply to all extension package.json files to handle workspace protocol (workspace:*).

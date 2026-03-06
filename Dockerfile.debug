@@ -1,0 +1,7 @@
+FROM alpine:latest
+
+# Install vim and bash for editing
+RUN apk add --no-cache vim bash nano curl
+
+# Keep container running
+CMD ["sh", "-c", "echo 'Debug container ready. SSH in and edit /data/.openclaw/openclaw.json' && tail -f /dev/null"]
